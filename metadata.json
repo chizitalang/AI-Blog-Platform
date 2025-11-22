@@ -1,0 +1,5 @@
+{
+  "name": "Zenith - AI Blog Platform",
+  "description": "A modern, minimalist personal blog frontend designed for a FastAPI backend. Features an integrated Gemini AI writing assistant to draft and edit markdown content.",
+  "requestFramePermissions": []
+}
