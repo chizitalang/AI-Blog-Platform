@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Menu, X, PenTool, Home, BookOpen, Github, Sparkles, ArrowLeft, Calendar, User, Tag, Send, Save, FileUp, Download, FolderOpen, ChevronRight } from 'lucide-react';
+import { Menu, X, PenTool, Home, BookOpen, Github, Sparkles, ArrowLeft, Calendar, User, Tag, Send, Save, FileUp, Download, FolderOpen, ChevronRight, Wand2, Twitter, Linkedin, Facebook, Search } from 'lucide-react';
 import { BlogPost, ViewState, Author } from './types';
 import { getPosts, createPost, getPostById, getAuthor, createFrontMatterString } from './services/blogService';
 import { generateBlogDraft, improveContent } from './services/geminiService';
@@ -104,6 +104,7 @@ const HomePage = ({
   onSelectPost: (id: string) => void 
 }) => {
   const [selectedFolder, setSelectedFolder] = useState<string>('All');
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Extract unique folders from file paths
   const folders = React.useMemo(() => {
@@ -127,10 +128,19 @@ const HomePage = ({
     return Array.from(paths).sort();
   }, [posts]);
 
-  // Filter posts based on selected folder (prefix match)
+  // Filter posts based on selected folder (prefix match) AND search query
   const filteredPosts = posts.filter(post => {
-    if (selectedFolder === 'All') return true;
-    return post.filename?.startsWith(selectedFolder);
+    // Folder Logic
+    const matchesFolder = selectedFolder === 'All' || post.filename?.startsWith(selectedFolder);
+    
+    // Search Logic
+    const query = searchQuery.toLowerCase();
+    const matchesSearch = !searchQuery || 
+        post.title.toLowerCase().includes(query) || 
+        post.excerpt.toLowerCase().includes(query) ||
+        post.tags.some(tag => tag.toLowerCase().includes(query));
+
+    return matchesFolder && matchesSearch;
   });
 
   return (
@@ -175,6 +185,20 @@ const HomePage = ({
 
         {/* Main Content Grid */}
         <div className="flex-1">
+            {/* Search Bar */}
+            <div className="relative mb-6">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Search className="h-5 w-5 text-slate-400" />
+                </div>
+                <input
+                    type="text"
+                    className="block w-full pl-10 pr-3 py-3 border border-slate-200 rounded-xl leading-5 bg-white placeholder-slate-400 focus:outline-none focus:placeholder-slate-300 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm shadow-sm transition-all hover:border-slate-300"
+                    placeholder="Search articles by title, content, or tags..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                />
+            </div>
+
             <div className="mb-4 flex items-center text-sm text-slate-500">
                <span className="font-semibold text-slate-900 mr-2">{filteredPosts.length}</span> 
                articles in 
@@ -232,7 +256,7 @@ const HomePage = ({
                 ))}
                 {filteredPosts.length === 0 && (
                     <div className="col-span-full text-center py-20 text-slate-400 bg-white rounded-2xl border border-dashed border-slate-200">
-                        <p>No posts found in this directory.</p>
+                        <p>No posts found matching your criteria.</p>
                     </div>
                 )}
             </div>
@@ -250,6 +274,31 @@ const ArticlePage = ({ post, onBack }: { post: BlogPost; onBack: () => void }) =
       getAuthor(post.author).then(setAuthor);
     }
   }, [post]);
+
+  const handleShare = (platform: string) => {
+    // Construct a shareable URL. In a real app, this would be the actual permalink.
+    // Since this is a demo running potentially in a sandbox with dynamic URLs, we'll mimic a real blog URL structure.
+    const baseUrl = 'https://zenith.blog'; // Mock domain for the demo
+    const url = `${baseUrl}/${post.filename?.replace('.md', '') || post.slug}`;
+    const text = post.title;
+    
+    let shareLink = '';
+    switch (platform) {
+      case 'twitter':
+        shareLink = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`;
+        break;
+      case 'linkedin':
+        shareLink = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`;
+        break;
+      case 'facebook':
+        shareLink = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`;
+        break;
+    }
+    
+    if (shareLink) {
+      window.open(shareLink, '_blank', 'width=600,height=400');
+    }
+  };
 
   if (!post) return <div className="text-center py-20">Loading...</div>;
 
@@ -282,14 +331,40 @@ const ArticlePage = ({ post, onBack }: { post: BlogPost; onBack: () => void }) =
           <h1 className="text-4xl md:text-5xl font-bold text-slate-900 mb-6 leading-tight">
             {post.title}
           </h1>
-          <div className="flex items-center space-x-6 text-slate-500 border-b border-slate-200 pb-8">
-            <div className="flex items-center">
+          <div className="flex items-center flex-wrap gap-y-4 text-slate-500 border-b border-slate-200 pb-8">
+            <div className="flex items-center mr-6">
               <User className="w-4 h-4 mr-2" />
               <span className="text-sm font-medium">{post.author}</span>
             </div>
-            <div className="flex items-center">
+            <div className="flex items-center mr-6">
               <Calendar className="w-4 h-4 mr-2" />
               <span className="text-sm font-medium">{post.publishedAt}</span>
+            </div>
+
+            {/* Social Share Buttons */}
+            <div className="flex items-center space-x-3 ml-auto">
+                <span className="text-xs font-semibold uppercase tracking-wider text-slate-400 mr-2 hidden sm:block">Share</span>
+                <button 
+                  onClick={() => handleShare('twitter')} 
+                  className="p-2 rounded-full bg-slate-50 text-slate-400 hover:text-[#1DA1F2] hover:bg-[#1DA1F2]/10 transition-colors"
+                  title="Share on Twitter"
+                >
+                  <Twitter className="w-4 h-4" />
+                </button>
+                <button 
+                  onClick={() => handleShare('linkedin')} 
+                  className="p-2 rounded-full bg-slate-50 text-slate-400 hover:text-[#0A66C2] hover:bg-[#0A66C2]/10 transition-colors"
+                  title="Share on LinkedIn"
+                >
+                  <Linkedin className="w-4 h-4" />
+                </button>
+                <button 
+                  onClick={() => handleShare('facebook')} 
+                  className="p-2 rounded-full bg-slate-50 text-slate-400 hover:text-[#1877F2] hover:bg-[#1877F2]/10 transition-colors"
+                  title="Share on Facebook"
+                >
+                  <Facebook className="w-4 h-4" />
+                </button>
             </div>
           </div>
         </header>
@@ -313,9 +388,11 @@ const EditorPage = ({ onCancel, onSave }: { onCancel: () => void; onSave: (post:
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [topic, setTopic] = useState('');
+  const [refineInstruction, setRefineInstruction] = useState('');
   const [tags, setTags] = useState('');
   const [folder, setFolder] = useState('blog');
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isRefining, setIsRefining] = useState(false);
   const [activeTab, setActiveTab] = useState<'write' | 'preview'>('write');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -347,6 +424,20 @@ const EditorPage = ({ onCancel, onSave }: { onCancel: () => void; onSave: (post:
       alert('Failed to generate content. Ensure API Key is valid.');
     } finally {
       setIsGenerating(false);
+    }
+  };
+
+  const handleRefine = async () => {
+    if (!refineInstruction || !content) return;
+    setIsRefining(true);
+    try {
+      const refined = await improveContent(content, refineInstruction);
+      setContent(refined);
+      setRefineInstruction('');
+    } catch (err) {
+      alert('Failed to refine content.');
+    } finally {
+      setIsRefining(false);
     }
   };
 
@@ -478,16 +569,18 @@ const EditorPage = ({ onCancel, onSave }: { onCancel: () => void; onSave: (post:
       </div>
 
       {/* AI Assistant Bar */}
-      <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-4 mb-6 flex flex-col md:flex-row gap-4 items-end md:items-center">
-        <div className="flex-1 w-full">
-          <label className="block text-xs font-semibold text-indigo-900 mb-1 uppercase tracking-wide">
-            <Sparkles className="w-3 h-3 inline mr-1" />
-            AI Copilot
-          </label>
+      <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-4 mb-6">
+        <div className="flex items-center mb-3">
+          <Sparkles className="w-4 h-4 text-indigo-600 mr-2" />
+          <h3 className="text-sm font-bold text-indigo-900 uppercase tracking-wide">AI Copilot</h3>
+        </div>
+        
+        <div className="space-y-3">
+          {/* Draft Generation */}
           <div className="flex gap-2">
-             <input 
+            <input 
               type="text" 
-              placeholder="e.g., Explain Quantum Computing to a 5-year-old"
+              placeholder="Topic: e.g., Explain Quantum Computing to a 5-year-old"
               className="flex-1 block w-full rounded-lg border-indigo-200 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2.5"
               value={topic}
               onChange={(e) => setTopic(e.target.value)}
@@ -497,11 +590,35 @@ const EditorPage = ({ onCancel, onSave }: { onCancel: () => void; onSave: (post:
               onClick={handleGenerate} 
               isLoading={isGenerating}
               disabled={!topic}
-              className="shrink-0"
+              className="shrink-0 w-32 md:w-auto"
             >
               Generate Draft
             </Button>
           </div>
+
+          {/* Refinement (Conditional) */}
+          {content && (
+            <div className="flex gap-2 pt-3 border-t border-indigo-200/50">
+               <input 
+                type="text" 
+                placeholder="Refine: e.g., Make the tone more professional, Fix grammar..."
+                className="flex-1 block w-full rounded-lg border-indigo-200 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2.5 bg-white/50 focus:bg-white transition-colors"
+                value={refineInstruction}
+                onChange={(e) => setRefineInstruction(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleRefine()}
+              />
+              <Button 
+                variant="outline"
+                onClick={handleRefine} 
+                isLoading={isRefining}
+                disabled={!refineInstruction}
+                className="shrink-0 w-32 md:w-auto bg-white hover:bg-indigo-50 text-indigo-700 border-indigo-200"
+                icon={<Wand2 className="w-4 h-4" />}
+              >
+                Refine
+              </Button>
+            </div>
+          )}
         </div>
       </div>
 
