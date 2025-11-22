@@ -223,9 +223,11 @@ const HomePage = ({
                     )}
                     <div className="p-6 flex-1 flex flex-col">
                     <div className="flex items-center space-x-2 mb-4">
-                        <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-100">
-                        {post.tags[0]}
-                        </span>
+                        {post.tags.length > 0 && (
+                          <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-100">
+                          {post.tags[0]}
+                          </span>
+                        )}
                         <span className="text-xs text-slate-400 flex items-center">
                         <Calendar className="w-3 h-3 mr-1" />
                         {post.publishedAt}
@@ -453,13 +455,18 @@ const EditorPage = ({ onCancel, onSave }: { onCancel: () => void; onSave: (post:
     // Clear draft on successful publish intent
     localStorage.removeItem('zenith_draft');
 
+    // Parse tags: split by comma, trim, filter empty
+    const tagArray = tags 
+        ? tags.split(',').map(t => t.trim()).filter(t => t.length > 0) 
+        : ['General'];
+
     onSave({
       title,
       content,
       excerpt: content.slice(0, 150) + '...',
       slug: title.toLowerCase().replace(/ /g, '-').replace(/[^\w-]+/g, ''),
       author: 'You',
-      tags: tags ? tags.split(',').map(t => t.trim()) : ['General'],
+      tags: tagArray.length > 0 ? tagArray : ['General'],
       coverImage: `https://picsum.photos/800/400?random=${Math.random()}`
     }, folder);
   };
@@ -514,7 +521,7 @@ const EditorPage = ({ onCancel, onSave }: { onCancel: () => void; onSave: (post:
       title: title || 'Untitled',
       date: new Date().toISOString().split('T')[0],
       author: 'You',
-      tags: tags ? tags.split(',').map(t => t.trim()) : ['Draft']
+      tags: tags ? tags.split(',').map(t => t.trim()).filter(t => t.length > 0) : ['Draft']
     };
     
     const fileContent = createFrontMatterString(metadata, content);
@@ -632,23 +639,28 @@ const EditorPage = ({ onCancel, onSave }: { onCancel: () => void; onSave: (post:
               onChange={(e) => setTitle(e.target.value)}
             />
             <div className="flex gap-4">
-                <div className="flex-1">
+                {/* Tags Input */}
+                <div className="flex-1 flex items-center bg-slate-50 rounded px-3 border border-slate-100 focus-within:ring-1 focus-within:ring-indigo-500 focus-within:border-indigo-500">
+                    <Tag className="w-4 h-4 text-slate-400 mr-2" />
                     <input 
-                    type="text" 
-                    placeholder="Tags (comma separated)..." 
-                    className="w-full text-sm text-slate-600 placeholder-slate-400 focus:outline-none bg-slate-50 p-2 rounded"
-                    value={tags}
-                    onChange={(e) => setTags(e.target.value)}
+                        type="text" 
+                        placeholder="Tags (comma separated)..." 
+                        className="w-full text-sm text-slate-600 placeholder-slate-400 focus:outline-none bg-transparent py-2"
+                        value={tags}
+                        onChange={(e) => setTags(e.target.value)}
                     />
                 </div>
-                <div className="flex-1 flex items-center bg-slate-50 rounded px-2">
+                
+                {/* Folder Path Input */}
+                <div className="flex-1 flex items-center bg-slate-50 rounded px-3 border border-slate-100 focus-within:ring-1 focus-within:ring-indigo-500 focus-within:border-indigo-500">
+                    <FolderOpen className="w-4 h-4 text-slate-400 mr-2" />
                     <span className="text-slate-400 text-sm mr-1">Path:</span>
                     <input 
-                    type="text" 
-                    placeholder="blog/category" 
-                    className="w-full text-sm text-slate-600 placeholder-slate-400 focus:outline-none bg-transparent"
-                    value={folder}
-                    onChange={(e) => setFolder(e.target.value)}
+                        type="text" 
+                        placeholder="blog/category" 
+                        className="w-full text-sm text-slate-600 placeholder-slate-400 focus:outline-none bg-transparent py-2"
+                        value={folder}
+                        onChange={(e) => setFolder(e.target.value)}
                     />
                 </div>
             </div>
